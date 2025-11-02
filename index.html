@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Botify - Gerenciamento de Bots</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Botify</h1>
+        <p>Gerenciamento simplificado de arquivos ZIP de bots.</p>
+    </header>
+
+    <main>
+        <section id="upload-section">
+            <h2>Upload e Validação de Bot</h2>
+            <form id="upload-form">
+                <label for="bot-zip">Selecione o arquivo ZIP do seu bot:</label>
+                <input type="file" id="bot-zip" name="file" accept=".zip" required>
+                
+                <label for="auth-token">Token de Autorização (Bearer):</label>
+                <input type="text" id="auth-token" placeholder="Insira seu token de autorização" required>
+
+                <button type="submit">Validar Bot</button>
+            </form>
+            <div id="status-message" class="hidden"></div>
+            <div id="result-display" class="hidden">
+                <h3>Resultado da Validação:</h3>
+                <pre id="validation-result"></pre>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Botify. Adaptado para Render.com</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

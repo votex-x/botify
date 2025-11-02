@@ -1,10 +1,8 @@
-cat > render.yaml << 'EOF'
 services:
   - type: web
     name: botify
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: python api.py
-    pythonVersion: 3.11.0
-EOF
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn api:app"
+    pythonVersion: "3.11"

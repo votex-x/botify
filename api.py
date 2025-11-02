@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from functools import wraps
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, db, storage
@@ -414,7 +414,11 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
 
-if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    debug = os.getenv('FLASK_ENV') == 'development'
-    app.run(host='0.0.0.0', port=port, debug=debug)
+# Adicionar rotas para servir os arquivos estáticos
+@app.route('/')
+def serve_index():
+    return send_from_directory('.', 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('.', path)
