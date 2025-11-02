@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Botify</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Navegação -->
+        <nav class="navbar">
+            <div class="navbar-container">
+                <div class="navbar-brand">
+                    <h1>🤖 Botify Admin</h1>
+                </div>
+                <ul class="navbar-menu">
+                    <li><a href="/" onclick="navigateTo('home')">Home</a></li>
+                    <li><a href="#" onclick="logout()">Logout</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            <div class="admin-container">
+                <h2>Painel de Administração</h2>
+
+                <!-- Seção de Concessão de Bites -->
+                <section class="admin-section">
+                    <h3>Conceder Bites</h3>
+                    <form id="grantBitesForm" class="admin-form">
+                        <div class="form-group">
+                            <label for="userEmail">Email do Usuário:</label>
+                            <input type="email" id="userEmail" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="bitesAmount">Quantidade de Bites:</label>
+                            <input type="number" id="bitesAmount" name="amount" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="bitesReason">Motivo:</label>
+                            <textarea id="bitesReason" name="reason" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Conceder Bites</button>
+                    </form>
+                </section>
+
+                <!-- Seção de Gerenciamento de Usuários -->
+                <section class="admin-section">
+                    <h3>Gerenciar Usuários</h3>
+                    <div class="admin-filters">
+                        <input type="text" id="searchUser" placeholder="Buscar usuário por email..." class="search-input">
+                    </div>
+                    <div id="usersList" class="users-list">
+                        <!-- Usuários serão carregados aqui -->
+                    </div>
+                </section>
+
+                <!-- Seção de Estatísticas -->
+                <section class="admin-section">
+                    <h3>Estatísticas</h3>
+                    <div id="statsContainer" class="stats-grid">
+                        <!-- Estatísticas serão carregadas aqui -->
+                    </div>
+                </section>
+
+                <!-- Seção de Bots Oficiais -->
+                <section class="admin-section">
+                    <h3>Gerenciar Bots Oficiais</h3>
+                    <form id="addOfficialBotForm" class="admin-form">
+                        <div class="form-group">
+                            <label for="officialBotTitle">Título:</label>
+                            <input type="text" id="officialBotTitle" name="title" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="officialBotDescription">Descrição:</label>
+                            <textarea id="officialBotDescription" name="description" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="officialBotPlatform">Plataforma:</label>
+                            <select id="officialBotPlatform" name="platform" required>
+                                <option value="">Selecione uma plataforma</option>
+                                <option value="discord">Discord</option>
+                                <option value="telegram">Telegram</option>
+                                <option value="other">Outra</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="officialBotFile">Arquivo ZIP:</label>
+                            <input type="file" id="officialBotFile" name="file" accept=".zip" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Adicionar Bot Oficial</button>
+                    </form>
+                </section>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 Botify Admin Panel</p>
+        </footer>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js"></script>
+
+    <!-- App Scripts -->
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+</html>
