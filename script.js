@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const validationResult = document.getElementById('validation-result');
     const authTokenInput = document.getElementById('auth-token');
 
-    const API_ENDPOINT = '/api/bots/validate-zip';
+    // Use a URL correta baseada no domínio atual
+    const API_ENDPOINT = window.location.origin + '/api/bots/validate-zip';
 
     function showStatus(message, isError = false) {
         statusMessage.textContent = message;
