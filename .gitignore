@@ -105,3 +105,30 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# Firebase
+serviceAccountKey.json
+firebase-debug.log
+firebase-debug.*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache/
+.dmypy.json
+dmypy.json
