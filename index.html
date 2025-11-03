@@ -3,37 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Botify - Gerenciamento de Bots</title>
+    <title>Botify - Catálogo de Bots</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
-        <h1>Botify</h1>
-        <p>Gerenciamento simplificado de arquivos ZIP de bots.</p>
+        <h1>🤖 Botify</h1>
+        <p>Catálogo público de bots - Publique e descubra bots incríveis!</p>
     </header>
 
     <main>
-        <section id="upload-section">
-            <h2>Upload e Validação de Bot</h2>
-            <form id="upload-form">
-                <label for="bot-zip">Selecione o arquivo ZIP do seu bot:</label>
-                <input type="file" id="bot-zip" name="file" accept=".zip" required>
-                
-                <label for="auth-token">Token de Autorização (Bearer):</label>
-                <input type="text" id="auth-token" placeholder="Insira seu token de autorização" required>
+        <!-- Seção de Publicação -->
+        <section id="publish-section" class="card">
+            <h2>📤 Publicar Novo Bot</h2>
+            <form id="publish-form">
+                <div class="form-group">
+                    <label for="bot-name">Nome do Bot:</label>
+                    <input type="text" id="bot-name" name="bot_name" required 
+                           placeholder="Digite um nome criativo para seu bot">
+                </div>
 
-                <button type="submit">Validar Bot</button>
+                <div class="form-group">
+                    <label for="bot-author">Seu Nome (opcional):</label>
+                    <input type="text" id="bot-author" name="author" 
+                           placeholder="Como você gostaria de ser creditado">
+                </div>
+
+                <div class="form-group">
+                    <label for="bot-description">Descrição:</label>
+                    <textarea id="bot-description" name="description" required 
+                              placeholder="Descreva o que seu bot faz..." rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="bot-tags">Tags (separadas por vírgula):</label>
+                    <input type="text" id="bot-tags" name="tags" 
+                           placeholder="ex: chatbot, utilidade, automacao">
+                </div>
+
+                <div class="form-group">
+                    <label for="bot-zip">Arquivo ZIP do Bot:</label>
+                    <input type="file" id="bot-zip" name="file" accept=".zip" required>
+                    <small>Selecione o arquivo ZIP contendo seu bot</small>
+                </div>
+
+                <button type="submit" id="publish-btn">🚀 Publicar Bot</button>
             </form>
-            <div id="status-message" class="hidden"></div>
-            <div id="result-display" class="hidden">
-                <h3>Resultado da Validação:</h3>
-                <pre id="validation-result"></pre>
+            <div id="publish-status" class="hidden"></div>
+        </section>
+
+        <!-- Seção de Catálogo -->
+        <section id="catalog-section" class="card">
+            <h2>📚 Catálogo de Bots</h2>
+            
+            <div class="catalog-controls">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="🔍 Buscar bots...">
+                    <button id="search-btn">Buscar</button>
+                </div>
+                <button id="refresh-btn">🔄 Atualizar</button>
             </div>
+
+            <div id="catalog-stats" class="stats"></div>
+            
+            <div id="bots-grid" class="bots-grid">
+                <!-- Bots serão carregados aqui via JavaScript -->
+            </div>
+
+            <div id="loading-message" class="loading">Carregando bots...</div>
+            <div id="empty-message" class="hidden">Nenhum bot encontrado. Seja o primeiro a publicar!</div>
         </section>
     </main>
 
+    <!-- Modal para detalhes do bot -->
+    <div id="bot-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
     <footer>
-        <p>&copy; 2025 Botify. Adaptado para Render.com</p>
+        <p>&copy; 2025 Botify - Catálogo Público de Bots | Totalmente gratuito e aberto</p>
     </footer>
 
     <script src="script.js"></script>
