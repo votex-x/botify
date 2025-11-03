@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Botify API - Python backend for bot ZIP management and processing
-Runs on Render.com with Flask
+Botify API - Catálogo Público de Bots
+Com Firebase Storage e Realtime Database
 """
 
 import os
@@ -15,87 +15,72 @@ from functools import wraps
 
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
+import firebase_admin
+from firebase_admin import credentials, db, storage
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
-# Firebase configuration (opcional - remova se não for usar)
-try:
-    import firebase_admin
-    from firebase_admin import credentials, db, storage
-    
-    FIREBASE_CONFIG = {
-        "apiKey": "AIzaSyBglmC1ru_cmEjBlT_LuGNnEOoBO-iOO78",
-        "authDomain": "firehx-786aa.firebaseapp.com",
-        "databaseURL": "https://firehx-786aa-default-rtdb.firebaseio.com",
-        "projectId": "firehx-786aa",
-        "storageBucket": "firehx-786aa.appspot.com",
-        "messagingSenderId": "504229083597",
-        "appId": "1:504229083597:web:eb9435991138c47eb12c84",
-    }
+# Firebase configuration
+FIREBASE_CONFIG = {
+    "apiKey": "AIzaSyBglmC1ru_cmEjBlT_LuGNnEOoBO-iOO78",
+    "authDomain": "firehx-786aa.firebaseapp.com",
+    "databaseURL": "https://firehx-786aa-default-rtdb.firebaseio.com",
+    "projectId": "firehx-786aa",
+    "storageBucket": "firehx-786aa.appspot.com",
+    "messagingSenderId": "504229083597",
+    "appId": "1:504229083597:web:eb9435991138c47eb12c84",
+}
 
-    # Initialize Firebase only if credentials are available
+# Initialize Firebase
+try:
     firebase_creds = os.getenv('FIREBASE_CREDENTIALS')
     if firebase_creds:
         creds_dict = json.loads(firebase_creds)
         cred = credentials.Certificate(creds_dict)
-        firebase_admin.initialize_app(cred, {
+        firebase_app = firebase_admin.initialize_app(cred, {
             'databaseURL': FIREBASE_CONFIG['databaseURL'],
             'storageBucket': FIREBASE_CONFIG['storageBucket']
         })
-        print("Firebase initialized successfully")
+        print("✅ Firebase inicializado com sucesso!")
+        
+        # Get database and storage references
+        database_ref = db.reference()
+        storage_bucket = storage.bucket()
     else:
-        print("Firebase credentials not found - running without Firebase")
-except ImportError:
-    print("Firebase admin not installed - running without Firebase")
+        raise Exception("Credenciais do Firebase não encontradas")
 except Exception as e:
-    print(f"Firebase initialization failed: {e}")
+    print(f"❌ Erro ao inicializar Firebase: {e}")
+    raise e
 
 # Temporary directory for processing
 TEMP_DIR = tempfile.gettempdir()
 UPLOAD_DIR = os.path.join(TEMP_DIR, 'botify_uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Authentication decorator (simplificado para deploy)
-def require_auth(f):
+# Authentication decorator - AGORA PÚBLICO!
+def public_access(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        token = request.headers.get('Authorization')
-        if not token:
-            return jsonify({'error': 'Missing authorization token'}), 401
-        
-        # Remove 'Bearer ' prefix if present
-        if token.startswith('Bearer '):
-            token = token[7:]
-        
-        # Basic token validation - expand as needed
-        if not token or len(token) < 10:
-            return jsonify({'error': 'Invalid token format'}), 401
-        
+        # Aceita qualquer requisição - catálogo público
         return f(*args, **kwargs)
     return decorated_function
-
 
 # Routes
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
-        'service': 'Botify API',
+        'service': 'Botify Catalog',
         'timestamp': datetime.now().isoformat()
     })
 
-
 @app.route('/api/bots/validate-zip', methods=['POST'])
-@require_auth
+@public_access
 def validate_zip():
-    """
-    Validate a ZIP file structure
-    Expected: multipart/form-data with 'file' field
-    """
+    """Validate ZIP file structure"""
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
@@ -108,20 +93,16 @@ def validate_zip():
         if not file.filename.endswith('.zip'):
             return jsonify({'error': 'File must be a ZIP archive'}), 400
         
-        # Save temporarily and validate
         temp_path = os.path.join(UPLOAD_DIR, f"temp_{datetime.now().timestamp()}.zip")
         file.save(temp_path)
         
         try:
-            # Validate ZIP structure
             with zipfile.ZipFile(temp_path, 'r') as zip_ref:
                 file_list = zip_ref.namelist()
                 
-                # Check if ZIP is valid
                 if len(file_list) == 0:
                     return jsonify({'error': 'ZIP file is empty'}), 400
                 
-                # Get ZIP info
                 zip_info = {
                     'files': file_list,
                     'file_count': len(file_list),
@@ -132,7 +113,6 @@ def validate_zip():
                 return jsonify(zip_info), 200
         
         finally:
-            # Clean up temp file
             if os.path.exists(temp_path):
                 os.remove(temp_path)
     
@@ -141,31 +121,36 @@ def validate_zip():
     except Exception as e:
         return jsonify({'error': f'Error validating ZIP: {str(e)}'}), 500
 
-
-@app.route('/api/bots/extract-info', methods=['POST'])
-@require_auth
-def extract_bot_info():
-    """
-    Extract bot information from ZIP file
-    Looks for bot.json or config.json in the root
-    """
+@app.route('/api/bots/publish', methods=['POST'])
+@public_access
+def publish_bot():
+    """Publica um bot no catálogo (AGORA PÚBLICO!)"""
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
         
         file = request.files['file']
+        bot_name = request.form.get('bot_name', 'Unnamed Bot')
+        description = request.form.get('description', 'No description')
+        author = request.form.get('author', 'Anonymous')
+        tags = request.form.get('tags', '')
         
         if not file.filename.endswith('.zip'):
             return jsonify({'error': 'File must be a ZIP archive'}), 400
         
-        temp_path = os.path.join(UPLOAD_DIR, f"temp_{datetime.now().timestamp()}.zip")
+        # Generate unique bot ID
+        bot_id = f"bot_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        
+        temp_path = os.path.join(UPLOAD_DIR, f"temp_{bot_id}.zip")
         file.save(temp_path)
         
         try:
             with zipfile.ZipFile(temp_path, 'r') as zip_ref:
-                bot_info = {}
+                if len(zip_ref.namelist()) == 0:
+                    return jsonify({'error': 'ZIP file is empty'}), 400
                 
-                # Try to read bot.json
+                # Extract bot info from config files
+                bot_info = {}
                 config_files = ['bot.json', 'config.json', 'package.json']
                 
                 for config_file in config_files:
@@ -176,10 +161,42 @@ def extract_bot_info():
                     except KeyError:
                         continue
                 
+                # Upload to Firebase Storage
+                storage_path = f"bots/{bot_id}.zip"
+                blob = storage_bucket.blob(storage_path)
+                blob.upload_from_filename(temp_path)
+                
+                # Make the file publicly accessible
+                blob.make_public()
+                download_url = blob.public_url
+                
+                # Create bot data for database
+                bot_data = {
+                    'id': bot_id,
+                    'name': bot_name,
+                    'description': description,
+                    'author': author,
+                    'tags': tags.split(',') if tags else [],
+                    'download_url': download_url,
+                    'file_size': os.path.getsize(temp_path),
+                    'file_count': len(zip_ref.namelist()),
+                    'metadata': bot_info,
+                    'downloads': 0,
+                    'rating': 0,
+                    'ratings_count': 0,
+                    'created_at': datetime.now().isoformat(),
+                    'updated_at': datetime.now().isoformat()
+                }
+                
+                # Save to Firebase Realtime Database
+                bots_ref = database_ref.child('bots')
+                bots_ref.child(bot_id).set(bot_data)
+                
                 return jsonify({
                     'success': True,
-                    'bot_info': bot_info,
-                    'files': zip_ref.namelist()
+                    'message': 'Bot publicado com sucesso!',
+                    'bot_id': bot_id,
+                    'bot_data': bot_data
                 }), 200
         
         finally:
@@ -187,231 +204,211 @@ def extract_bot_info():
                 os.remove(temp_path)
     
     except Exception as e:
-        return jsonify({'error': f'Error extracting info: {str(e)}'}), 500
+        return jsonify({'error': f'Error publishing bot: {str(e)}'}), 500
 
-
-@app.route('/api/bots/process', methods=['POST'])
-@require_auth
-def process_bot():
-    """
-    Process bot ZIP file
-    - Validate structure
-    - Extract metadata
-    - Prepare for storage
-    """
+@app.route('/api/bots', methods=['GET'])
+@public_access
+def get_all_bots():
+    """Obtém todos os bots do catálogo"""
     try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file provided'}), 400
+        bots_ref = database_ref.child('bots')
+        bots_data = bots_ref.get()
         
-        file = request.files['file']
-        user_id = request.form.get('user_id')
-        bot_id = request.form.get('bot_id')
+        if not bots_data:
+            return jsonify({'bots': []}), 200
         
-        if not user_id or not bot_id:
-            return jsonify({'error': 'Missing user_id or bot_id'}), 400
+        # Convert to list
+        bots_list = []
+        for bot_id, bot_data in bots_data.items():
+            if bot_data:
+                bot_data['id'] = bot_id
+                bots_list.append(bot_data)
         
-        if not file.filename.endswith('.zip'):
-            return jsonify({'error': 'File must be a ZIP archive'}), 400
-        
-        temp_path = os.path.join(UPLOAD_DIR, f"temp_{datetime.now().timestamp()}.zip")
-        file.save(temp_path)
-        
-        try:
-            with zipfile.ZipFile(temp_path, 'r') as zip_ref:
-                # Validate ZIP
-                if len(zip_ref.namelist()) == 0:
-                    return jsonify({'error': 'ZIP file is empty'}), 400
-                
-                # Extract metadata
-                bot_info = {}
-                for config_file in ['bot.json', 'config.json']:
-                    try:
-                        with zip_ref.open(config_file) as f:
-                            bot_info = json.loads(f.read().decode('utf-8'))
-                            break
-                    except KeyError:
-                        continue
-                
-                # Create processing result
-                result = {
-                    'success': True,
-                    'bot_id': bot_id,
-                    'user_id': user_id,
-                    'file_size': os.path.getsize(temp_path),
-                    'file_count': len(zip_ref.namelist()),
-                    'metadata': bot_info,
-                    'processed_at': datetime.now().isoformat()
-                }
-                
-                return jsonify(result), 200
-        
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-    
-    except Exception as e:
-        return jsonify({'error': f'Error processing bot: {str(e)}'}), 500
-
-
-@app.route('/api/bots/<bot_id>/versions', methods=['GET'])
-@require_auth
-def get_bot_versions(bot_id):
-    """Get all versions of a bot"""
-    try:
-        # Query Firebase for bot versions
-        # This would be implemented with actual Firebase queries
-        versions = []
+        # Sort by creation date (newest first)
+        bots_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         
         return jsonify({
-            'bot_id': bot_id,
-            'versions': versions
+            'success': True,
+            'bots': bots_list,
+            'count': len(bots_list)
         }), 200
     
     except Exception as e:
-        return jsonify({'error': f'Error getting versions: {str(e)}'}), 500
+        return jsonify({'error': f'Error getting bots: {str(e)}'}), 500
 
-
-@app.route('/api/bots/<bot_id>/update', methods=['POST'])
-@require_auth
-def update_bot(bot_id):
-    """Update bot with new ZIP file"""
+@app.route('/api/bots/<bot_id>', methods=['GET'])
+@public_access
+def get_bot(bot_id):
+    """Obtém um bot específico"""
     try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file provided'}), 400
+        bot_ref = database_ref.child('bots').child(bot_id)
+        bot_data = bot_ref.get()
         
-        file = request.files['file']
-        user_id = request.form.get('user_id')
+        if not bot_data:
+            return jsonify({'error': 'Bot not found'}), 404
         
-        if not user_id:
-            return jsonify({'error': 'Missing user_id'}), 400
-        
-        if not file.filename.endswith('.zip'):
-            return jsonify({'error': 'File must be a ZIP archive'}), 400
-        
-        # Verify user owns the bot
-        # This would be implemented with Firebase queries
-        
-        temp_path = os.path.join(UPLOAD_DIR, f"temp_{datetime.now().timestamp()}.zip")
-        file.save(temp_path)
-        
-        try:
-            with zipfile.ZipFile(temp_path, 'r') as zip_ref:
-                if len(zip_ref.namelist()) == 0:
-                    return jsonify({'error': 'ZIP file is empty'}), 400
-                
-                result = {
-                    'success': True,
-                    'bot_id': bot_id,
-                    'version': datetime.now().isoformat(),
-                    'file_size': os.path.getsize(temp_path),
-                    'file_count': len(zip_ref.namelist())
-                }
-                
-                return jsonify(result), 200
-        
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+        bot_data['id'] = bot_id
+        return jsonify({'success': True, 'bot': bot_data}), 200
     
     except Exception as e:
-        return jsonify({'error': f'Error updating bot: {str(e)}'}), 500
+        return jsonify({'error': f'Error getting bot: {str(e)}'}), 500
 
-
-@app.route('/api/bots/<bot_id>/download', methods=['GET'])
+@app.route('/api/bots/<bot_id>/download', methods=['POST'])
+@public_access
 def download_bot(bot_id):
-    """Download bot ZIP file"""
+    """Incrementa contador de downloads e retorna URL"""
     try:
-        # Get bot from Firebase Storage
-        # This would be implemented with actual Firebase Storage operations
+        bot_ref = database_ref.child('bots').child(bot_id)
+        bot_data = bot_ref.get()
         
-        return jsonify({'error': 'Bot not found'}), 404
+        if not bot_data:
+            return jsonify({'error': 'Bot not found'}), 404
+        
+        # Increment download count
+        current_downloads = bot_data.get('downloads', 0)
+        bot_ref.update({
+            'downloads': current_downloads + 1,
+            'updated_at': datetime.now().isoformat()
+        })
+        
+        return jsonify({
+            'success': True,
+            'download_url': bot_data.get('download_url'),
+            'bot_name': bot_data.get('name')
+        }), 200
     
     except Exception as e:
         return jsonify({'error': f'Error downloading bot: {str(e)}'}), 500
 
+@app.route('/api/bots/<bot_id>/rate', methods=['POST'])
+@public_access
+def rate_bot(bot_id):
+    """Avalia um bot"""
+    try:
+        data = request.get_json()
+        rating = data.get('rating')
+        
+        if not rating or not isinstance(rating, (int, float)) or rating < 1 or rating > 5:
+            return jsonify({'error': 'Rating must be between 1 and 5'}), 400
+        
+        bot_ref = database_ref.child('bots').child(bot_id)
+        bot_data = bot_ref.get()
+        
+        if not bot_data:
+            return jsonify({'error': 'Bot not found'}), 404
+        
+        current_rating = bot_data.get('rating', 0)
+        current_count = bot_data.get('ratings_count', 0)
+        
+        # Calculate new average rating
+        new_rating = ((current_rating * current_count) + rating) / (current_count + 1)
+        
+        bot_ref.update({
+            'rating': round(new_rating, 1),
+            'ratings_count': current_count + 1,
+            'updated_at': datetime.now().isoformat()
+        })
+        
+        return jsonify({
+            'success': True,
+            'new_rating': round(new_rating, 1),
+            'ratings_count': current_count + 1
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': f'Error rating bot: {str(e)}'}), 500
+
+@app.route('/api/bots/search', methods=['GET'])
+@public_access
+def search_bots():
+    """Busca bots por nome, tags ou descrição"""
+    try:
+        query = request.args.get('q', '').lower()
+        
+        if not query:
+            return jsonify({'error': 'Query parameter required'}), 400
+        
+        bots_ref = database_ref.child('bots')
+        bots_data = bots_ref.get()
+        
+        if not bots_data:
+            return jsonify({'bots': []}), 200
+        
+        results = []
+        for bot_id, bot_data in bots_data.items():
+            if not bot_data:
+                continue
+                
+            # Search in name, description, tags, and author
+            searchable_text = f"""
+            {bot_data.get('name', '').lower()}
+            {bot_data.get('description', '').lower()}
+            {bot_data.get('author', '').lower()}
+            {' '.join(bot_data.get('tags', [])).lower()}
+            """
+            
+            if query in searchable_text:
+                bot_data['id'] = bot_id
+                results.append(bot_data)
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'count': len(results),
+            'query': query
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': f'Error searching bots: {str(e)}'}), 500
 
 @app.route('/api/stats', methods=['GET'])
+@public_access
 def get_stats():
-    """Get API statistics"""
+    """Estatísticas do catálogo"""
     try:
-        stats = {
-            'total_bots': 0,
-            'total_users': 0,
-            'total_downloads': 0,
-            'api_version': '1.0.0',
-            'timestamp': datetime.now().isoformat()
-        }
+        bots_ref = database_ref.child('bots')
+        bots_data = bots_ref.get()
         
-        return jsonify(stats), 200
+        total_bots = len(bots_data) if bots_data else 0
+        total_downloads = 0
+        total_ratings = 0
+        
+        if bots_data:
+            for bot_data in bots_data.values():
+                if bot_data:
+                    total_downloads += bot_data.get('downloads', 0)
+                    total_ratings += bot_data.get('ratings_count', 0)
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_bots': total_bots,
+                'total_downloads': total_downloads,
+                'total_ratings': total_ratings,
+                'average_rating': round(total_ratings / total_bots, 1) if total_bots > 0 else 0
+            }
+        }), 200
     
     except Exception as e:
         return jsonify({'error': f'Error getting stats: {str(e)}'}), 500
 
-
-@app.route('/api/python-api', methods=['POST'])
-@require_auth
-def handle_python_api():
-    """
-    Handle Python API code submission
-    Users can submit Python code to be executed for their bot API
-    """
-    try:
-        data = request.get_json()
-        
-        if not data or 'code' not in data:
-            return jsonify({'error': 'No code provided'}), 400
-        
-        bot_id = data.get('bot_id')
-        user_id = data.get('user_id')
-        code = data.get('code')
-        
-        if not bot_id or not user_id:
-            return jsonify({'error': 'Missing bot_id or user_id'}), 400
-        
-        # Validate Python code (basic syntax check)
-        try:
-            compile(code, '<string>', 'exec')
-        except SyntaxError as e:
-            return jsonify({'error': f'Syntax error in code: {str(e)}'}), 400
-        
-        # Store code in Firebase
-        # This would be implemented with actual Firebase operations
-        
-        result = {
-            'success': True,
-            'bot_id': bot_id,
-            'message': 'Python API code saved successfully',
-            'timestamp': datetime.now().isoformat()
-        }
-        
-        return jsonify(result), 200
-    
-    except Exception as e:
-        return jsonify({'error': f'Error handling Python API: {str(e)}'}), 500
-
-
+# Error handlers
 @app.errorhandler(404)
 def not_found(error):
-    """Handle 404 errors"""
     return jsonify({'error': 'Endpoint not found'}), 404
-
 
 @app.errorhandler(500)
 def internal_error(error):
-    """Handle 500 errors"""
     return jsonify({'error': 'Internal server error'}), 500
 
-
-# Rota principal para servir o frontend
+# Serve frontend
 @app.route('/')
 def serve_index():
     return send_from_directory('.', 'index.html')
 
-# Servir arquivos estáticos
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory('.', path)
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
