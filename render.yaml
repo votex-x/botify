@@ -3,6 +3,8 @@ services:
     name: botify
     env: python
     plan: free
-    buildCommand: "pip3 install -r requirements.txt"
-    startCommand: "gunicorn api:app"
-    
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn api:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
