@@ -4,5 +4,5 @@ services:
     env: python
     plan: free
     buildCommand: "pip3 install -r requirements.txt"
-    startCommand: "pip3 install -r requirements.txt && gunicorn api:app"
+    startCommand: "gunicorn api:app"
     
