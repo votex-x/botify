@@ -3,6 +3,6 @@ services:
     name: botify
     env: python
     plan: free
-    buildCommand: "pip install -r requirements.txt"
+    buildCommand: "pip3 install -r requirements.txt"
     startCommand: "gunicorn api:app"
     pythonVersion: "3.11"
