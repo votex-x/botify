@@ -1,4 +1,0 @@
-# Ignore Node.js files to force Python environment
-package.json
-yarn.lock
-node_modules
